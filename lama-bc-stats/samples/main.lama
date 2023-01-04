@@ -1,0 +1,123 @@
+fun int(s) {
+  fun modify(st, x, n) {
+    fun(y) {
+        -- n
+        if x == y then
+            n 
+        else
+            st (y) 
+        fi
+    }
+  }
+  
+  case s of
+    Assn  (x, e)    -> fun (st) { modify(st, x, eval(e)(st)) }
+  | Seq   (l, r)    -> fun (st) { int(r)(int(l)(st)) }
+  | If    (c, t, e) -> fun (st) { if eval(c)(st)
+                                    then
+                                        int (t)
+                                    else
+                                        int (e)
+                                  fi (st)
+                                }
+  | While (c, b)    -> fun (st) { if eval(c)(st)
+                                    then
+                                        int(s)(int(b)(st))
+                                    else
+                                        st
+                                    fi
+                                }
+  esac
+}
+
+fun eval (e) {
+  case e of
+    #str       -> fun (st) { st(e) } 
+  | #val       -> fun (_)  { e }      
+  | Add (l, r) -> fun (st) { eval(l)(st) + eval(r)(st) }
+  | Sub (l, r) -> fun (st) { eval(l)(st) - eval(r)(st) }
+  esac
+}
+
+(*
+var res = 1
+var i = x
+while (i) {
+    var j = i
+    var k = 0
+    while (j) {
+        k = k + res
+        j = j - 1
+    }
+    res = k
+    i -= 1
+}
+res
+*)
+var fac = Seq(
+    Assn("res", 1), 
+    Seq(
+        Assn("i", "x"),
+        While(
+            "i",
+            Seq(
+                Assn(
+                    "j",
+                    "i"
+                ),
+                Seq(
+                    Assn(
+                        "k",
+                        0
+                    ),
+                    Seq(
+                        While(
+                            "j",
+                            Seq(
+                                Assn(
+                                    "k",
+                                    Add(
+                                        "k",
+                                        "res"
+                                    )
+                                ),
+                                Assn(
+                                    "j",
+                                    Sub(
+                                        "j",
+                                        1
+                                    )
+                                )
+                            )
+                        ),
+                        Seq(
+                            Assn(
+                                "res",
+                                "k"
+                            ),
+                            Assn(
+                                "i",
+                                Sub(
+                                    "i",
+                                    1
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+);
+
+var x = read();
+
+var state = fun (v) {
+    case v of
+      "x" -> x
+    | _   -> 0
+    esac
+};
+
+write(int(fac)(state)("res"))
+-- printf("%d\n", int(fac)(state)("res"))

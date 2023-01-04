@@ -1,0 +1,9 @@
+fun sum(x, y) {
+    x + y
+}
+
+var x = read();
+var y = read();
+var z = sum(x + y);
+
+write(z)

@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "lama-bc",
+    "lama-bc-stats",
+]

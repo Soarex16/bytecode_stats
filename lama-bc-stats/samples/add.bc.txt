@@ -1,0 +1,12 @@
+String table size       : 5
+Global area size        : 0
+Number of public symbols: 1
+Public symbols          :
+   0x00000000: main
+Code:
+0x00000000:	BEGIN	2 0
+0x00000009:	CONST	1
+0x0000000e:	CONST	2
+0x00000013:	BINOP	+
+0x00000014:	END
+0x00000015:	<end>
