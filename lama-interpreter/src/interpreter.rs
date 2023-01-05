@@ -22,16 +22,11 @@ pub struct Interpreter<'a> {
 
 impl Interpreter<'_> {
     pub fn new<'a>(bf: &'a ByteFile) -> Interpreter<'a> {
-        let mut stack = Stack::new();
-        stack.push(Value::Empty); // placeholders
-        stack.push(Value::Empty); // for
-        stack.push(Value::ReturnAddress(bf.code.len())); // main
-
         Interpreter {
             globals: Scope::new(bf.global_area_size),
             call_stack: CallStack::new(),
             builtins: Box::new(RustEnvironment),
-            stack,
+            stack: Stack::new(),
             ip: 0,
             bf,
         }
@@ -74,7 +69,14 @@ impl Interpreter<'_> {
         }
     }
 
-    pub fn run(&mut self) -> Result<(), InterpreterError> {
+    pub fn run(&mut self, args: Vec<String>) -> Result<(), InterpreterError> {
+        let nargs = args.len() as i32;
+        self.stack.push(Value::Array(Rc::new(
+            args.into_iter().map(Value::String).collect(),
+        ))); // args
+        self.stack.push(Value::Int(nargs)); // argc
+        self.stack.push(Value::ReturnAddress(self.bf.code.len())); // main
+
         while self.ip < self.bf.code.len() {
             let opcode = &self.bf.code[self.ip];
 

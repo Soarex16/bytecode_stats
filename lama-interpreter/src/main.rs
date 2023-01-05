@@ -3,8 +3,10 @@ use std::{env, error::Error, fs, io::Read};
 use lama_interpreter::Interpreter;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
-    let mut f = fs::File::open(&args[1])?;
+    let mut args = env::args().into_iter().skip(1);
+    let file_name = args.next().expect("Expected .bc file path");
+    let mut f = fs::File::open(&file_name)?;
+    let program_args = args.collect();
 
     let mut buffer = Vec::new();
     // read the whole file
@@ -13,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bytefile = lama_bc::parse(&buffer)?;
 
     let mut interpreter = Interpreter::new(&bytefile);
-    interpreter.run()?;
+    interpreter.run(program_args)?;
 
     Ok(())
 }
