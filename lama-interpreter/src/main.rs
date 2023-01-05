@@ -1,6 +1,6 @@
 use std::{env, error::Error, fs, io::Read};
 
-use lama_interpreter::interpreter::Interpreter;
+use lama_interpreter::Interpreter;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
