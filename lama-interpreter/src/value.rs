@@ -62,7 +62,7 @@ impl Display for Value {
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
-            Value::Sexp(tag, tag_label, vals) => write!(
+            Value::Sexp(_, tag_label, vals) => write!(
                 f,
                 "{}({})",
                 tag_label,

@@ -16,8 +16,8 @@ impl Scope {
     pub fn lookup(&self, index: usize) -> Result<Value, InterpreterError> {
         self.values
             .get(index)
-            .map(|x| x.clone())
-            .ok_or_else(|| InterpreterError::InvalidValueAccess(index))
+            .cloned()
+            .ok_or(InterpreterError::InvalidValueAccess(index))
     }
 
     pub fn set(&mut self, index: usize, val: Value) -> Result<(), InterpreterError> {
@@ -25,9 +25,8 @@ impl Scope {
             .get_mut(index)
             .map(|r| {
                 *r = val;
-                ()
             })
-            .ok_or_else(|| InterpreterError::InvalidValueAccess(index))
+            .ok_or(InterpreterError::InvalidValueAccess(index))
     }
 }
 

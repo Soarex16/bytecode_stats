@@ -17,7 +17,7 @@ impl Stack {
     pub fn pop(&mut self) -> Result<Value, InterpreterError> {
         self.stack
             .pop()
-            .ok_or_else(|| InterpreterError::ValueStackUnderflow)
+            .ok_or(InterpreterError::ValueStackUnderflow)
     }
 
     pub fn take(&mut self, count: usize) -> Result<Vec<Value>, InterpreterError> {
@@ -37,7 +37,7 @@ impl Stack {
         self.stack
             .pop()
             .map(|_| ())
-            .ok_or_else(|| InterpreterError::ValueStackUnderflow)
+            .ok_or(InterpreterError::ValueStackUnderflow)
     }
 
     pub fn dup(&mut self) -> Result<(), InterpreterError> {

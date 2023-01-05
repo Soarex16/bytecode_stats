@@ -50,18 +50,18 @@ impl CallStack {
         self.records
             .pop()
             .map(|rec| rec.return_address)
-            .ok_or_else(|| InterpreterError::CallStackUnderflow)
+            .ok_or(InterpreterError::CallStackUnderflow)
     }
 
     pub fn top(&self) -> Result<&ActivationRecord, InterpreterError> {
         self.records
             .last()
-            .ok_or_else(|| InterpreterError::CallStackUnderflow)
+            .ok_or(InterpreterError::CallStackUnderflow)
     }
 
     pub fn top_mut(&mut self) -> Result<&mut ActivationRecord, InterpreterError> {
         self.records
             .last_mut()
-            .ok_or_else(|| InterpreterError::CallStackUnderflow)
+            .ok_or(InterpreterError::CallStackUnderflow)
     }
 }

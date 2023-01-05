@@ -170,12 +170,12 @@ impl Interpreter<'_> {
                     let idx = self.stack.pop()?.unwrap_int()? as usize;
                     let val = self.stack.pop()?;
                     let item = match val {
-                        Value::Sexp(_, _, ref items) => items
-                            .get(idx)
-                            .ok_or_else(|| InterpreterError::IndexOutOfRange(idx)),
-                        Value::Array(ref items) => items
-                            .get(idx)
-                            .ok_or_else(|| InterpreterError::IndexOutOfRange(idx)),
+                        Value::Sexp(_, _, ref items) => {
+                            items.get(idx).ok_or(InterpreterError::IndexOutOfRange(idx))
+                        }
+                        Value::Array(ref items) => {
+                            items.get(idx).ok_or(InterpreterError::IndexOutOfRange(idx))
+                        }
                         _ => Err(InterpreterError::UnexpectedValue {
                             expected: "array or sexp".to_string(),
                             found: val.to_string(),
@@ -249,62 +249,14 @@ impl Interpreter<'_> {
             BinOp::Mul => l * r,
             BinOp::Div => l / r,
             BinOp::Mod => l % r,
-            BinOp::Lt => {
-                if l < r {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::LtEq => {
-                if l <= r {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::Gt => {
-                if l > r {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::GtEq => {
-                if l >= r {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::Eq => {
-                if l == r {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::Neq => {
-                if l != r {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::And => {
-                if l & r != 0 {
-                    1
-                } else {
-                    0
-                }
-            }
-            BinOp::Or => {
-                if l | r != 0 {
-                    1
-                } else {
-                    0
-                }
-            }
+            BinOp::Lt => i32::from(l < r),
+            BinOp::LtEq => i32::from(l <= r),
+            BinOp::Gt => i32::from(l > r),
+            BinOp::GtEq => i32::from(l >= r),
+            BinOp::Eq => i32::from(l == r),
+            BinOp::Neq => i32::from(l != r),
+            BinOp::And => i32::from(l & r != 0),
+            BinOp::Or => i32::from(l | r != 0),
         };
 
         Ok(Value::Int(res))

@@ -222,7 +222,7 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
     let translate_address = |addr: usize| {
         opcode_offsets_mapping
             .get(&addr)
-            .ok_or_else(|| BytecodeParseError::InvalidFunctionAddress(addr))
+            .ok_or(BytecodeParseError::InvalidFunctionAddress(addr))
     };
 
     code.into_iter()
