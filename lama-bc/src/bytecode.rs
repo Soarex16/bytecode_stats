@@ -1,4 +1,4 @@
-use std::{fmt::Display};
+use std::fmt::Display;
 
 pub struct ByteFile<'a> {
     string_table: &'a [u8],
@@ -23,8 +23,7 @@ impl ByteFile<'_> {
     }
 
     pub fn string<'a>(&'a self, ptr: &StringPtr) -> Result<&'a str, std::str::Utf8Error> {
-        let nul_range_end = self
-            .string_table[ptr.0..]
+        let nul_range_end = self.string_table[ptr.0..]
             .iter()
             .position(|&c| c == b'\0')
             .unwrap_or(self.string_table.len()); // default to length if no `\0` present

@@ -4,68 +4,12 @@ use lama_bc::bytecode::*;
 
 use crate::{
     builtin::{Environment, RustEnvironment},
+    call_stack::CallStack,
     error::InterpreterError,
+    scope::Scope,
     stack::Stack,
-    value::{Value}, scope::Scope,
+    value::Value,
 };
-
-struct ActivationRecord {
-    args: Scope,
-    locals: Scope,
-    return_address: InstructionPtr,
-}
-
-impl ActivationRecord {
-    fn lookup(&self, loc: &Location) -> Result<Value, InterpreterError> {
-        match loc {
-            Location::Arg(l) => self.args.lookup(*l as usize),
-            Location::Local(l) => self.locals.lookup(*l as usize),
-            l => Err(InterpreterError::UnexpectedLocation(*l)),
-        }
-    }
-
-    pub fn set(&mut self, loc: &Location, val: Value) -> Result<(), InterpreterError> {
-        match loc {
-            Location::Arg(l) => self.args.set(*l as usize, val),
-            Location::Local(l) => self.locals.set(*l as usize, val),
-            l => Err(InterpreterError::UnexpectedLocation(*l)),
-        }
-    }
-}
-
-struct CallStack {
-    records: Vec<ActivationRecord>,
-}
-
-impl CallStack {
-    fn new() -> Self {
-        Self {
-            records: Vec::new(),
-        }
-    }
-
-    fn begin(&mut self, record: ActivationRecord) {
-        self.records.push(record)
-    }
-
-    fn end(&mut self) -> Result<ActivationRecord, InterpreterError> {
-        self.records
-            .pop()
-            .ok_or_else(|| InterpreterError::CallStackUnderflow)
-    }
-
-    fn top(&self) -> Result<&ActivationRecord, InterpreterError> {
-        self.records
-            .last()
-            .ok_or_else(|| InterpreterError::CallStackUnderflow)
-    }
-
-    fn top_mut(&mut self) -> Result<&mut ActivationRecord, InterpreterError> {
-        self.records
-            .last_mut()
-            .ok_or_else(|| InterpreterError::CallStackUnderflow)
-    }
-}
 
 pub struct Interpreter<'a> {
     ip: usize,
@@ -95,19 +39,14 @@ impl Interpreter<'_> {
 
     fn begin(&mut self, nargs: usize, nlocals: usize) -> Result<(), InterpreterError> {
         let return_address = InstructionPtr(self.stack.pop()?.unwrap_return_addr()?);
-        let record = ActivationRecord {
-            args: Scope::from(self.stack.take(nargs)?),
-            locals: Scope::new(nlocals),
-            return_address,
-        };
-
-        self.call_stack.begin(record);
+        self.call_stack
+            .begin(self.stack.take(nargs)?, nlocals, return_address);
         Ok(())
     }
 
     fn end(&mut self) -> Result<(), InterpreterError> {
-        let rec = self.call_stack.end()?;
-        self.jump(&rec.return_address)
+        let ret = self.call_stack.end()?;
+        self.jump(&ret)
     }
 
     fn call(&mut self, ptr: &InstructionPtr) -> Result<(), InterpreterError> {
@@ -256,7 +195,7 @@ impl Interpreter<'_> {
                         _ => 0,
                     };
                     self.stack.push(Value::Int(matches))
-                },
+                }
                 OpCode::ARRAY(size) => {
                     let matches = match self.stack.pop()? {
                         Value::Array(items) if items.len() == *size as usize => 1,

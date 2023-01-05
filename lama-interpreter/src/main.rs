@@ -1,4 +1,4 @@
-use std::{error::Error, env, fs, io::Read};
+use std::{env, error::Error, fs, io::Read};
 
 use lama_interpreter::interpreter::Interpreter;
 

@@ -1,6 +1,6 @@
 use std::iter;
 
-use crate::{value::Value, error::InterpreterError};
+use crate::{error::InterpreterError, value::Value};
 
 pub struct Scope {
     values: Vec<Value>,
