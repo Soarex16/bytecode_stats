@@ -1,0 +1,18 @@
+fun transform_list (l) {
+  fun rec (l) {
+    case l of
+      x : tl -> if x % 2 != 0 then x * 2 else x * 100 fi : rec(tl)
+    | _ -> []
+    esac
+  }
+
+  rec (l)
+}
+
+var arr = 5 : 4 : 1 : 100 : 7 : [];
+var doubled = transform_list (arr);
+
+write("original array:");
+write(arr);
+write("transformed list:");
+write(doubled)

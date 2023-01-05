@@ -3,4 +3,5 @@
 members = [
     "lama-bc",
     "lama-bc-stats",
+    "lama-interpreter",
 ]

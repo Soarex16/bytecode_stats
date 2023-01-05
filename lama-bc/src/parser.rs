@@ -1,7 +1,5 @@
-use crate::bytecode::{
-    BinOp, BuiltIn, ByteFile, InstructionPtr, JumpCondition, Location, OpCode, Pattern, StringPtr,
-};
-use std::{mem::size_of, str, usize};
+use crate::bytecode::*;
+use std::{collections::HashMap, mem::size_of, usize};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,8 +16,10 @@ pub enum BytecodeParseError {
     InvalidLoc(u8),
     #[error("unexpected end of file")]
     UnexpectedEof,
-    #[error("unsupported instruction {insn:?}")]
-    UnsupportedInstruction { insn: &'static str },
+    #[error("invalid function address {0}")]
+    InvalidFunctionAddress(usize),
+    #[error("unsupported instruction {0}")]
+    UnsupportedInstruction(String),
     #[error("unknown data store error")]
     Unknown,
 }
@@ -84,7 +84,7 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
 
     let mut code = vec![];
 
-    let mut position = 0;
+    let mut position = 0usize;
 
     let read_bytes = |pos: &mut usize, cnt: usize| {
         if *pos + cnt <= input.len() {
@@ -117,7 +117,10 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
 
     let parse_string = |pos: &mut usize| parse_u32(pos).map(|x| StringPtr(x as usize));
 
+    let mut opcode_offsets_mapping = HashMap::<usize, InstructionPtr>::new();
+
     loop {
+        opcode_offsets_mapping.insert(position, InstructionPtr(code.len()));
         let x = parse_byte(&mut position)?;
 
         let high = (x & 0xF0) >> 4;
@@ -134,7 +137,7 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
                 },
                 3 => OpCode::STI,
                 4 => OpCode::STA,
-                5 => OpCode::JMP(InstructionPtr(parse_u32(&mut position)?)),
+                5 => OpCode::JMP(InstructionPtr(parse_u32(&mut position)? as usize)),
                 6 => OpCode::END,
                 7 => OpCode::RET,
                 8 => OpCode::DROP,
@@ -151,53 +154,46 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
                 match low {
                     0 => OpCode::CJMP(
                         JumpCondition::Zero,
-                        InstructionPtr(parse_u32(&mut position)?),
+                        InstructionPtr(parse_u32(&mut position)? as usize),
                     ),
                     1 => OpCode::CJMP(
                         JumpCondition::NotZero,
-                        InstructionPtr(parse_u32(&mut position)?),
+                        InstructionPtr(parse_u32(&mut position)? as usize),
                     ),
                     2 => OpCode::BEGIN {
-                        args_count: parse_u32(&mut position)?,
-                        locals_count: parse_u32(&mut position)?,
+                        nargs: parse_u32(&mut position)?,
+                        nlocals: parse_u32(&mut position)?,
                     },
                     3 => OpCode::CBEGIN {
-                        args_count: parse_u32(&mut position)?,
-                        locals_count: parse_u32(&mut position)?,
+                        nargs: parse_u32(&mut position)?,
+                        nlocals: parse_u32(&mut position)?,
                     },
                     4 => {
-                        let ptr = InstructionPtr(parse_u32(&mut position)?);
+                        let ptr = InstructionPtr(parse_u32(&mut position)? as usize);
                         let size = parse_u32(&mut position)?;
                         let mut closure = vec![];
                         for _ in 0..size {
                             let loc = parse_byte(&mut position)?;
                             closure.push(parse_loc(&mut position, loc)?)
                         }
-                        OpCode::CLOSURE {
-                            ptr,
-                            refs: closure,
-                        }
+                        OpCode::CLOSURE { ptr, refs: closure }
                     }
                     5 => OpCode::CALLC {
-                        args_count: parse_u32(&mut position)?,
+                        nargs: parse_u32(&mut position)?,
                     },
-                    // 3 => Err(BytecodeParseError::UnsupportedInstruction { insn: "CBEGIN" })?,
-                    // 4 => Err(BytecodeParseError::UnsupportedInstruction { insn: "CLOSURE" })?,
-                    // 5 => Err(BytecodeParseError::UnsupportedInstruction { insn: "CALLC" })?,
+                    // 3 => Err(BytecodeParseError::UnsupportedInstruction("CBEGIN".to_string()))?,
+                    // 4 => Err(BytecodeParseError::UnsupportedInstruction("CLOSURE".to_string()))?,
+                    // 5 => Err(BytecodeParseError::UnsupportedInstruction("CALLC".to_string()))?,
                     6 => OpCode::CALL {
-                        ptr: InstructionPtr(parse_u32(&mut position)?),
-                        args_count: parse_u32(&mut position)?,
+                        ptr: InstructionPtr(parse_u32(&mut position)? as usize),
+                        nargs: parse_u32(&mut position)?,
                     },
                     7 => OpCode::TAG {
                         tag: parse_string(&mut position)?,
                         size: parse_u32(&mut position)?,
                     },
                     8 => OpCode::ARRAY(parse_u32(&mut position)?),
-                    9 => {
-                        let pos = parse_u32(&mut position)?;
-                        parse_u32(&mut position)?; // skip "leave a value" param
-                        OpCode::FAIL(pos)
-                    }
+                    9 => OpCode::FAIL(parse_u32(&mut position)?, parse_u32(&mut position)?),
                     10 => OpCode::LINE(parse_u32(&mut position)?),
 
                     _ => Err(BytecodeParseError::InvalidOpcode(x))?,
@@ -222,7 +218,34 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
         code.push(opcode);
     }
 
-    Ok(code)
+    // (addr: usize) -> Result<usize, BytecodeParseError>
+    let translate_address = |addr: usize| {
+        opcode_offsets_mapping
+            .get(&addr)
+            .ok_or_else(|| BytecodeParseError::InvalidFunctionAddress(addr))
+    };
+
+    code.into_iter()
+        .map(|opcode| match opcode {
+            OpCode::JMP(addr) => {
+                let addr = translate_address(addr.0)?;
+                Ok(OpCode::JMP(*addr))
+            }
+            OpCode::CJMP(cond, addr) => {
+                let addr = translate_address(addr.0)?;
+                Ok(OpCode::CJMP(cond, *addr))
+            }
+            OpCode::CALL { ptr, nargs } => {
+                let addr = translate_address(ptr.0)?;
+                Ok(OpCode::CALL { ptr: *addr, nargs })
+            }
+            OpCode::CLOSURE { ptr, refs } => {
+                let addr = translate_address(ptr.0)?;
+                Ok(OpCode::CLOSURE { ptr: *addr, refs })
+            }
+            _ => Ok(opcode),
+        })
+        .collect()
 }
 
 fn read_u32(input: &[u8]) -> u32 {

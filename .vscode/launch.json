@@ -38,7 +38,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [ "${workspaceFolder}/lama-bc-stats/samples/Sort.bc" ],
+            "args": [ "${workspaceFolder}/samples/Sort.bc" ],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -54,6 +54,43 @@
                 ],
                 "filter": {
                     "name": "lama-bc-stats",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'lama-interpreter'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=lama-interpreter",
+                    "--package=lama-interpreter"
+                ],
+                "filter": {
+                    "name": "lama-interpreter",
+                    "kind": "bin"
+                }
+            },
+            "args": [ "${workspaceFolder}/samples/Sort_write.bc" ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'lama-interpreter'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=lama-interpreter",
+                    "--package=lama-interpreter"
+                ],
+                "filter": {
+                    "name": "lama-interpreter",
                     "kind": "bin"
                 }
             },

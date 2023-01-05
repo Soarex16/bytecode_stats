@@ -1,0 +1,8 @@
+var x1 = "abcdefgh";
+var x2 = [1, 2, 3];
+var x3 = Test(4, 5, 6);
+write(x1);
+write(x2);
+write(x3);
+write(x2[0]);
+write(x3[1])

@@ -1,9 +1,9 @@
-use std::fmt::Display;
+use std::{fmt::Display};
 
 pub struct ByteFile<'a> {
     string_table: &'a [u8],
-    public_symbols_table: &'a [u8],
-    global_area_size: usize,
+    _public_symbols_table: &'a [u8],
+    pub global_area_size: usize,
     pub code: Vec<OpCode>,
 }
 
@@ -16,10 +16,19 @@ impl ByteFile<'_> {
     ) -> ByteFile<'a> {
         ByteFile {
             string_table,
-            public_symbols_table,
+            _public_symbols_table: public_symbols_table,
             global_area_size,
             code,
         }
+    }
+
+    pub fn string<'a>(&'a self, ptr: &StringPtr) -> Result<&'a str, std::str::Utf8Error> {
+        let nul_range_end = self
+            .string_table[ptr.0..]
+            .iter()
+            .position(|&c| c == b'\0')
+            .unwrap_or(self.string_table.len()); // default to length if no `\0` present
+        ::std::str::from_utf8(&self.string_table[ptr.0..ptr.0 + nul_range_end])
     }
 }
 
@@ -74,11 +83,11 @@ pub enum BuiltIn {
     Array(u32),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct StringPtr(pub usize);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct InstructionPtr(pub u32);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct InstructionPtr(pub usize); // instruction offset in opcode vec
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum OpCode {
@@ -101,14 +110,14 @@ pub enum OpCode {
     CJMP(JumpCondition, InstructionPtr),
 
     BEGIN {
-        args_count: u32,
-        locals_count: u32,
+        nargs: u32,
+        nlocals: u32,
     },
     END,
     RET,
     CALL {
         ptr: InstructionPtr,
-        args_count: u32,
+        nargs: u32,
     },
 
     DROP,
@@ -121,22 +130,22 @@ pub enum OpCode {
     ARRAY(u32),
     PATT(Pattern),
 
-    FAIL(u32),
+    FAIL(u32, u32), // line number, leave a value
     LINE(u32),
 
     BUILTIN(BuiltIn),
 
     // Closures are not supported
     CBEGIN {
-        args_count: u32,
-        locals_count: u32,
+        nargs: u32,
+        nlocals: u32,
     },
     CLOSURE {
         ptr: InstructionPtr,
         refs: Vec<Location>,
     },
     CALLC {
-        args_count: u32,
+        nargs: u32,
     },
 }
 
