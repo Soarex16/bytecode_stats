@@ -34,7 +34,7 @@ impl Environment for RustEnvironment {
     ) -> Result<Value, InterpreterError> {
         match func {
             "Lread" => {
-                print!(">");
+                print!("> ");
                 io::stdout()
                     .flush()
                     .map_err(|_| InterpreterError::Unknown("IO error".to_string()))?;
