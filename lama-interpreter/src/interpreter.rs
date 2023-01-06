@@ -3,7 +3,7 @@ use std::rc::Rc;
 use lama_bc::bytecode::*;
 
 use crate::{
-    builtin::{Environment, RustEnvironment},
+    builtin::{Environment},
     call_stack::CallStack,
     error::InterpreterError,
     scope::Scope,
@@ -21,11 +21,11 @@ pub struct Interpreter<'a> {
 }
 
 impl Interpreter<'_> {
-    pub fn new<'a>(bf: &'a ByteFile) -> Interpreter<'a> {
+    pub fn new<'a>(bf: &'a ByteFile, builtins: Box<dyn Environment>) -> Interpreter<'a> {
         Interpreter {
             globals: Scope::new(bf.global_area_size),
             call_stack: CallStack::new(),
-            builtins: Box::new(RustEnvironment),
+            builtins,
             stack: Stack::new(),
             ip: 0,
             bf,

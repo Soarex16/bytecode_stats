@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let bytefile = lama_bc::parse(&buffer)?;
 
-    let mut interpreter = Interpreter::new(&bytefile);
+    let mut interpreter = Interpreter::new(&bytefile, Box::new(UnsafeEnvironment));
     interpreter.run(program_args)?;
 
     Ok(())

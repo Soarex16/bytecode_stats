@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::str;
 
 pub struct ByteFile<'a> {
     string_table: &'a [u8],
@@ -27,7 +28,7 @@ impl ByteFile<'_> {
             .iter()
             .position(|&c| c == b'\0')
             .unwrap_or(self.string_table.len()); // default to length if no `\0` present
-        ::std::str::from_utf8(&self.string_table[ptr.0..ptr.0 + nul_range_end])
+        str::from_utf8(&self.string_table[ptr.0..ptr.0 + nul_range_end])
     }
 }
 

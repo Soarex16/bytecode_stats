@@ -5,8 +5,8 @@ use lama_bc::bytecode::{Location, StringPtr};
 use crate::error::InterpreterError;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[repr(C)]
 pub enum Value {
-    Empty,
     Int(i32),
     Sexp(StringPtr, String, Rc<Vec<Value>>),
     String(String),
@@ -51,7 +51,6 @@ impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Int(x) => write!(f, "{}", x),
-            Value::Empty => write!(f, "empty"),
             Value::ReturnAddress(addr) => write!(f, "return({})", addr),
             Value::Ref(l) => write!(f, "ref({:?})", l),
             Value::Array(vals) => write!(
