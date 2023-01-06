@@ -81,6 +81,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'lama-interpreter' (native env)",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--target=i686-unknown-linux-gnu",
+                    "--bin=lama-interpreter",
+                    "--package=lama-interpreter"
+                ],
+                "filter": {
+                    "name": "lama-interpreter",
+                    "kind": "bin"
+                }
+            },
+            "args": [ "${workspaceFolder}/samples/func.bc" ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'lama-interpreter'",
             "cargo": {
                 "args": [

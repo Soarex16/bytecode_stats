@@ -29,7 +29,7 @@ impl Environment for RustEnvironment {
     fn library(
         &mut self,
         func: &str,
-        nargs: usize,
+        _nargs: usize,
         stack: &mut Stack,
     ) -> Result<Value, InterpreterError> {
         match func {
