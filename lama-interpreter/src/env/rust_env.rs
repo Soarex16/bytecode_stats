@@ -5,19 +5,28 @@ use std::{
 
 use lama_bc::bytecode::BuiltIn;
 
-use crate::{error::InterpreterError, stack::Stack, value::Value};
+use crate::{error::InterpreterError, stack::Stack, value::{Value, NativeValue, Ref}};
 
 use super::Environment;
 
-pub struct RustEnvironment;
+pub struct RustEnvironment {
+    arrays: Vec<Vec<NativeValue>>
+}
+
+impl RustEnvironment {
+    pub fn new() -> Self {
+        Self { arrays: Vec::new() }
+    }
+}
 
 impl Environment for RustEnvironment {
-    fn built_in(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<Value, InterpreterError> {
+    fn built_in(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<NativeValue, InterpreterError> {
         match b {
             BuiltIn::Array(size) => {
                 let mut vals = stack.take(size as usize)?;
                 vals.reverse();
-                Ok(Value::Array(Rc::new(vals)))
+                self.arrays.push(vals);
+                Ok(NativeValue::wrap_ref(Ref(self.arrays.last_mut().unwrap().as_mut_ptr() as *mut NativeValue)))
             }
             b => Err(InterpreterError::Failure(format!(
                 "unsupported bultin: {:?}",
@@ -31,7 +40,7 @@ impl Environment for RustEnvironment {
         func: &str,
         _nargs: usize,
         stack: &mut Stack,
-    ) -> Result<Value, InterpreterError> {
+    ) -> Result<NativeValue, InterpreterError> {
         match func {
             "Lread" => {
                 print!("> ");
@@ -45,24 +54,25 @@ impl Environment for RustEnvironment {
                 let num: i32 = input.trim().parse().map_err(|_| {
                     InterpreterError::Failure("Error parsing number in builtin Read".to_string())
                 })?;
-                Ok(Value::Int(num))
+                Ok(NativeValue::box_i32(num))
             }
             "Lwrite" => {
                 let val = stack.pop()?;
-                println!("{}", val);
-                Ok(Value::Int(0))
+                println!("{}", val.unwrap_int()?);
+                Ok(NativeValue::box_i32(0))
             }
             "Llength" => {
-                let val = stack.pop()?;
-                match val {
-                    Value::Sexp(_, _, vals) => Ok(Value::Int(vals.len() as i32)),
-                    Value::String(str) => Ok(Value::Int(str.len() as i32)),
-                    Value::Array(vals) => Ok(Value::Int(vals.len() as i32)),
-                    _ => Err(InterpreterError::UnexpectedValue {
-                        expected: "sexp, array or string".to_string(),
-                        found: val.to_string(),
-                    }),
-                }
+                // let val = stack.pop()?;
+                // match val {
+                //     Value::Sexp(_, _, vals) => Ok(Value::Int(vals.len() as i32)),
+                //     Value::String(str) => Ok(Value::Int(str.len() as i32)),
+                //     Value::Array(vals) => Ok(Value::Int(vals.len() as i32)),
+                //     _ => Err(InterpreterError::UnexpectedValue {
+                //         expected: "sexp, array or string".to_string(),
+                //         found: val.to_string(),
+                //     }),
+                // }
+                todo!()
             }
             _ => Err(InterpreterError::UnknownFunction(func.to_string())),
         }

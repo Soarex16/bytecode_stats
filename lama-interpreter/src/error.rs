@@ -19,6 +19,8 @@ pub enum InterpreterError {
     InvalidValueAccess(usize),
     #[error("value stack is empty")]
     ValueStackUnderflow,
+    #[error("value stack overflow")]
+    ValueStackOverflow,
     #[error("call stack is empty")]
     CallStackUnderflow,
     #[error("Failure: {0}")]

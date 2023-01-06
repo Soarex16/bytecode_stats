@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let env: Box<dyn Environment> = if cfg!(feature = "native_env") {
         Box::new(lama_interpreter::NativeEnvironment::new())
     } else {
-        Box::new(lama_interpreter::RustEnvironment)
+        Box::new(lama_interpreter::RustEnvironment::new())
     };
 
     let mut interpreter = Interpreter::new(&bytefile, env);

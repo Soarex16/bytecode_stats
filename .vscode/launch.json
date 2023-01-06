@@ -75,7 +75,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [ "${workspaceFolder}/samples/func.bc" ],
+            "args": [ "${workspaceFolder}/samples/Sti.bc" ],
             "cwd": "${workspaceFolder}"
         },
         {

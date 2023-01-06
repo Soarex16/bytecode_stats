@@ -4,7 +4,7 @@ use lama_bc::bytecode::*;
 
 use crate::{
     call_stack::CallStack, env::Environment, error::InterpreterError, scope::Scope, stack::Stack,
-    value::Value,
+    value::{Value, NativeValue, Ref},
 };
 
 pub struct Interpreter<'a> {
@@ -31,7 +31,7 @@ impl Interpreter<'_> {
     }
 
     fn begin(&mut self, nargs: usize, nlocals: usize) -> Result<(), InterpreterError> {
-        let return_address = InstructionPtr(self.stack.pop()?.unwrap_return_addr()?);
+        let return_address = InstructionPtr(self.stack.pop()?.unwrap_int()? as usize);
         self.call_stack
             .begin(self.stack.take(nargs)?, nlocals, return_address);
         Ok(())
@@ -43,11 +43,11 @@ impl Interpreter<'_> {
     }
 
     fn call(&mut self, ptr: &InstructionPtr) -> Result<(), InterpreterError> {
-        self.stack.push(Value::ReturnAddress(self.ip));
+        self.stack.push(NativeValue::box_i32(self.ip as i32));
         self.jump(ptr)
     }
 
-    fn lookup(&self, loc: &Location) -> Result<Value, InterpreterError> {
+    fn lookup(&self, loc: &Location) -> Result<NativeValue, InterpreterError> {
         match loc {
             Location::Global(l) => self.globals.lookup(*l as usize),
             Location::Closure(_) => Err(InterpreterError::Unknown(
@@ -57,7 +57,7 @@ impl Interpreter<'_> {
         }
     }
 
-    fn set(&mut self, loc: &Location, val: Value) -> Result<(), InterpreterError> {
+    fn set(&mut self, loc: &Location, val: NativeValue) -> Result<(), InterpreterError> {
         match loc {
             Location::Closure(_) => Err(InterpreterError::Unknown(
                 "Closures are not supported".to_string(),
@@ -67,13 +67,30 @@ impl Interpreter<'_> {
         }
     }
 
+    fn get_ref(&mut self, loc: &Location) -> Result<Ref, InterpreterError> {
+        match loc {
+            Location::Global(l) => self.globals.lookup_ref(*l as usize),
+            Location::Closure(_) => Err(InterpreterError::Unknown(
+                "Closures are not supported".to_string(),
+            )),
+            l => self.call_stack.top_mut()?.lookup_ref(l),
+        }
+    }
+
+    fn set_ref(&mut self, r: &Ref, val: NativeValue) {
+        unsafe {
+            *r.0 = val;
+        }
+    }
+
     pub fn run(&mut self, args: Vec<String>) -> Result<(), InterpreterError> {
         let nargs = args.len() as i32;
-        self.stack.push(Value::Array(Rc::new(
-            args.into_iter().map(Value::String).collect(),
-        ))); // args
-        self.stack.push(Value::Int(nargs)); // argc
-        self.stack.push(Value::ReturnAddress(self.bf.code.len())); // main
+        // self.stack.push(Value::Array(Rc::new(
+        //     args.into_iter().map(Value::String).collect(),
+        // ))); // args
+        self.stack.push(NativeValue::box_i32(nargs)); // argc
+        self.stack.push(NativeValue::box_i32(nargs)); // argc
+        self.stack.push(NativeValue::box_i32(self.bf.code.len() as i32)); // main
 
         while self.ip < self.bf.code.len() {
             let opcode = &self.bf.code[self.ip];
@@ -82,12 +99,13 @@ impl Interpreter<'_> {
             // println!("stack: {:?}", self.stack);
             // println!("opcode: {:?}", opcode);
 
-            match opcode {
-                OpCode::CONST(x) => self.stack.push(Value::Int(*x)),
+            let x : () = match opcode {
+                OpCode::CONST(x) => self.stack.push(NativeValue::box_i32(*x)),
                 OpCode::BINOP(op) => {
                     let rhs = self.stack.pop()?;
                     let lhs = self.stack.pop()?;
-                    self.stack.push(self.eval_bin_op(op, lhs, rhs)?)
+                    let result = self.eval_bin_op(op, lhs, rhs)?;
+                    self.stack.push(result)
                 }
 
                 OpCode::JMP(ptr) => {
@@ -109,14 +127,15 @@ impl Interpreter<'_> {
                                 continue;
                             }
                         }
-                    }
+                    };
+                    Ok(())
                 }
 
                 OpCode::BEGIN { nargs, nlocals } => {
-                    self.begin(*nargs as usize, *nlocals as usize)?
+                    self.begin(*nargs as usize, *nlocals as usize)
                 }
                 OpCode::END => {
-                    self.end()?;
+                    self.end()
                 }
                 OpCode::CALL(FunctionCall::Function { ptr, nargs: _ }) => {
                     self.call(ptr)?;
@@ -124,35 +143,36 @@ impl Interpreter<'_> {
                 }
                 OpCode::CALL(FunctionCall::Library { func, nargs }) => {
                     let res = self.env.library(func, *nargs as usize, &mut self.stack)?;
-                    self.stack.push(res);
+                    self.stack.push(res)
                 }
                 OpCode::CALL(FunctionCall::BuiltIn(b)) => {
                     let res = self.env.built_in(*b, &mut self.stack)?;
-                    self.stack.push(res);
+                    self.stack.push(res)
                 }
                 OpCode::FAIL(line, _) => {
                     let x = self.stack.pop()?;
                     return Err(InterpreterError::Failure(format!(
-                        "matching value {} failure at {}",
+                        "matching value {:?} failure at {}",
                         x, line
                     )));
                 }
 
-                OpCode::DROP => self.stack.drop()?,
-                OpCode::DUP => self.stack.dup()?,
-                OpCode::SWAP => self.stack.swap()?,
+                OpCode::DROP => self.stack.drop(),
+                OpCode::DUP => self.stack.dup(),
+                OpCode::SWAP => self.stack.swap(),
 
                 OpCode::LD(loc) => self.stack.push(self.lookup(loc)?),
                 OpCode::ST(loc) => {
                     let val = self.stack.pop()?;
                     self.stack.push(val.clone());
-                    self.set(loc, val)?
+                    self.set(loc, val)
                 }
 
                 OpCode::STI => {
                     let val = self.stack.pop()?;
-                    let loc = self.stack.pop()?.unwrap_ref()?;
-                    self.set(&loc, val)?
+                    let loc = self.stack.pop()?.unwrap_ref();
+                    self.set_ref(&loc, val); // todo: safety
+                    Ok(())
                 }
                 OpCode::SEXP { tag, size } => {
                     let mut vals = self.stack.take(*size as usize)?;
@@ -162,7 +182,8 @@ impl Interpreter<'_> {
                         .string(tag)
                         .map_err(|_| InterpreterError::InvalidString(*tag))?
                         .to_owned();
-                    self.stack.push(Value::Sexp(*tag, tag_label, Rc::new(vals)))
+                    todo!()
+                    // self.stack.push(Value::Sexp(*tag, tag_label, Rc::new(vals)))
                 }
                 OpCode::STRING(s) => {
                     let str = self
@@ -170,12 +191,26 @@ impl Interpreter<'_> {
                         .string(s)
                         .map_err(|_| InterpreterError::InvalidString(*s))?
                         .to_owned();
-                    self.stack.push(Value::String(str))
+                    todo!()
+                    // self.stack.push(Value::String(str))
                 }
-                OpCode::LDA(loc) => self.stack.push(Value::Ref(*loc)),
-                OpCode::STA => todo!(),
+                OpCode::LDA(loc) => {
+                    let r = self.get_ref(loc)?;
+                    self.stack.push(NativeValue::wrap_ref(r))
+                },
+                OpCode::STA => {
+                    let val = self.stack.pop()?;
+                    let x = self.stack.pop()?;
+                    if x.unboxed() {
+                        todo!() // array, etc
+                    } else {
+                        self.set_ref(&x.unwrap_ref(), val)
+                    }
+                    Ok(())
+                },
                 OpCode::ELEM => {
-                    let idx = self.stack.pop()?.unwrap_int()? as usize;
+                    todo!()
+                    /* let idx = self.stack.pop()?.unwrap_int()? as usize;
                     let val = self.stack.pop()?;
                     let item = match val {
                         Value::Sexp(_, _, ref items) => {
@@ -189,27 +224,30 @@ impl Interpreter<'_> {
                             found: val.to_string(),
                         }),
                     }?;
-                    self.stack.push(item.clone());
+                    self.stack.push(item.clone()); */
                 }
 
                 OpCode::TAG { tag, size } => {
-                    let matches = match self.stack.pop()? {
+                    todo!()
+                    /* let matches = match self.stack.pop()? {
                         Value::Sexp(t, _, items) if t == *tag && items.len() == *size as usize => 1,
                         _ => 0,
                     };
-                    self.stack.push(Value::Int(matches))
+                    self.stack.push(Value::Int(matches)) */
                 }
                 OpCode::ARRAY(size) => {
-                    let matches = match self.stack.pop()? {
+                    todo!()
+                    /* let matches = match self.stack.pop()? {
                         Value::Array(items) if items.len() == *size as usize => 1,
                         _ => 0,
                     };
-                    self.stack.push(Value::Int(matches))
+                    self.stack.push(Value::Int(matches)) */
                 }
                 OpCode::PATT(p) => {
-                    let val = self.stack.pop()?;
+                    todo!()
+                    /* let val = self.stack.pop()?;
                     let matches = self.check_pattern(p, val)?;
-                    self.stack.push(matches);
+                    self.stack.push(matches); */
                 }
 
                 OpCode::CBEGIN { .. } => {
@@ -230,9 +268,10 @@ impl Interpreter<'_> {
 
                 OpCode::LINE(x) => {
                     self.line = *x as usize;
+                    Ok(())
                 },
-                OpCode::RET => (), // unused
-            }
+                OpCode::RET => Ok(()), // unused
+            }?;
             self.ip += 1;
         }
         Ok(())
@@ -248,7 +287,7 @@ impl Interpreter<'_> {
         Ok(())
     }
 
-    fn eval_bin_op(&self, op: &BinOp, lhs: Value, rhs: Value) -> Result<Value, InterpreterError> {
+    fn eval_bin_op(&self, op: &BinOp, lhs: NativeValue, rhs: NativeValue) -> Result<NativeValue, InterpreterError> {
         let l = lhs.unwrap_int()?;
         let r = rhs.unwrap_int()?;
 
@@ -268,42 +307,43 @@ impl Interpreter<'_> {
             BinOp::Or => i32::from(l | r != 0),
         };
 
-        Ok(Value::Int(res))
+        Ok(NativeValue::box_i32(res))
     }
 
-    fn check_pattern(&mut self, p: &Pattern, val: Value) -> Result<Value, InterpreterError> {
-        let result = match p {
-            Pattern::String => match val {
-                Value::String(_) => Ok(1),
-                _ => Ok(0),
-            },
-            Pattern::Array => match val {
-                Value::Array(_) => Ok(1),
-                _ => Ok(0),
-            },
-            Pattern::Sexp => match val {
-                Value::Sexp(_, _, _) => Ok(1),
-                _ => Ok(0),
-            },
-            Pattern::Boxed => match val {
-                Value::Int(_) => Ok(0),
-                _ => Ok(1),
-            },
-            Pattern::UnBoxed => match val {
-                Value::Int(_) => Ok(1),
-                _ => Ok(0),
-            },
-            Pattern::Closure => Err(InterpreterError::UnsupportedInstruction(
-                "PATT(Closure)".to_string(),
-            )),
-            Pattern::StrCmp => {
-                let str = self.stack.pop()?;
-                match (val, str) {
-                    (Value::String(x), Value::String(y)) if x == y => Ok(1),
-                    _ => Ok(0),
-                }
-            }
-        }?;
-        Ok(Value::Int(result))
+    fn check_pattern(&mut self, p: &Pattern, val: Value) -> Result<NativeValue, InterpreterError> {
+        todo!()
+        // let result = match p {
+        //     Pattern::String => match val {
+        //         Value::String(_) => Ok(1),
+        //         _ => Ok(0),
+        //     },
+        //     Pattern::Array => match val {
+        //         Value::Array(_) => Ok(1),
+        //         _ => Ok(0),
+        //     },
+        //     Pattern::Sexp => match val {
+        //         Value::Sexp(_, _, _) => Ok(1),
+        //         _ => Ok(0),
+        //     },
+        //     Pattern::Boxed => match val {
+        //         Value::Int(_) => Ok(0),
+        //         _ => Ok(1),
+        //     },
+        //     Pattern::UnBoxed => match val {
+        //         Value::Int(_) => Ok(1),
+        //         _ => Ok(0),
+        //     },
+        //     Pattern::Closure => Err(InterpreterError::UnsupportedInstruction(
+        //         "PATT(Closure)".to_string(),
+        //     )),
+        //     Pattern::StrCmp => {
+        //         let str = self.stack.pop()?;
+        //         match (val, str) {
+        //             (Value::String(x), Value::String(y)) if x == y => Ok(1),
+        //             _ => Ok(0),
+        //         }
+        //     }
+        // }?;
+        // Ok(NativeValue::box_i32(result))
     }
 }

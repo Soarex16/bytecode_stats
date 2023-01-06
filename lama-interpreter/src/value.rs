@@ -74,3 +74,60 @@ impl Display for Value {
         }
     }
 }
+
+#[repr(i32)]
+enum ValueTag {
+    String = 0x00000001,
+    Array = 0x00000003,
+    Sexp = 0x00000005,
+    Closure = 0x00000007,
+    ReturnAddress = 0x00000009,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct NativeValue(i32);
+
+pub struct Ref(pub *mut NativeValue);
+
+impl Ref {
+    fn set(&self, val: NativeValue) {
+
+    }
+}
+
+impl NativeValue {
+    pub fn box_i32(num: i32) -> Self {
+        NativeValue((num << 1) | 0x0001)
+    }
+
+    pub fn wrap(num: i32) -> Self {
+        NativeValue(num)
+    }
+
+    pub fn wrap_ref(r: Ref) -> Self {
+        Self(r.0 as i32)
+    }
+
+    pub fn unwrap_ref(self) -> Ref {
+        Ref(self.0 as *mut NativeValue)
+    }
+
+    pub fn boxed(&self) -> bool {
+        (self.0 & 0x0001) == 0
+    }
+
+    pub fn unboxed(&self) -> bool {
+        !self.boxed()
+    }
+
+    pub fn unwrap_int(self) -> Result<i32, InterpreterError> {
+        if self.boxed() {
+            Err(InterpreterError::UnexpectedValue {
+                expected: "int".to_string(),
+                found: "boxed value".to_string(),
+            })
+        } else {
+            Ok(self.0 >> 1)
+        }
+    }
+}

@@ -1,0 +1,6 @@
+var x = [1, 2, 3, 4];
+var z;
+var y = read();
+if y then x[3] else z fi := 4;
+write(x);
+write(z)

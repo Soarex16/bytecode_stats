@@ -1,0 +1,11 @@
+var x = [1, 2, 3, 4];
+var z;
+var y = read();
+(
+  var zz = 12;
+  if y then zz else z fi := 42;
+  write(zz)
+);
+
+write(x);
+write(z)
