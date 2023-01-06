@@ -13,6 +13,8 @@ extern "C" {
     fn Lwrite(val: c_int) -> c_int;
 
     fn Barray(bn: c_int, ...) -> *mut c_void;
+
+    fn __gc_init();
 }
 
 fn box_int(num: i32) -> i32 {
@@ -32,6 +34,17 @@ enum Tag {
 }
 
 pub struct NativeEnvironment;
+
+impl NativeEnvironment {
+    #[cfg(all(target_os = "linux", target_arch = "x86"))]
+    pub fn new() -> Self {
+        __gc_init();
+        NativeEnvironment
+    }
+
+    #[cfg(not(all(target_os = "linux", target_arch = "x86")))]
+    pub fn new() -> Self { NativeEnvironment }
+}
 
 impl Environment for NativeEnvironment {
     #[cfg(all(target_os = "linux", target_arch = "x86"))]
