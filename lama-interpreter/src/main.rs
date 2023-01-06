@@ -1,6 +1,7 @@
 use std::{env, error::Error, fs, io::Read};
 
 use lama_interpreter::Interpreter;
+use lama_interpreter::UnsafeEnvironment;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args().into_iter().skip(1);

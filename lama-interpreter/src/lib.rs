@@ -5,7 +5,6 @@ mod interpreter;
 mod scope;
 mod stack;
 mod value;
-#[cfg(all(target_os = "linux", target_arch = "x86"))]
 mod unsafe_builtin;
 
 pub use interpreter::Interpreter;

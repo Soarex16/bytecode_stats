@@ -75,7 +75,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [ "${workspaceFolder}/samples/Sort_write.bc" ],
+            "args": [ "${workspaceFolder}/samples/func.bc" ],
             "cwd": "${workspaceFolder}"
         },
         {

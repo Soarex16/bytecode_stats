@@ -33,7 +33,7 @@ impl Environment for UnsafeEnvironment {
     fn eval(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<Value, InterpreterError> {
         match b {
             BuiltIn::Read => {
-                let num = unsafe { Lread() }; // boxed num
+                let num = unsafe { Lread() };
                 Ok(Value::Int(unbox_int(num)))
             },
             BuiltIn::Write => todo!(),
