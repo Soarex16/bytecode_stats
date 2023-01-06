@@ -15,8 +15,8 @@ enum Tag {
 #[link(name = "runtime")]
 #[cfg(all(target_os = "linux", target_arch = "x86"))]
 extern "stdcall" {
-    fn read() -> c_int;
-    fn write(val: c_int) -> c_int;
+    fn Lread() -> c_int;
+    fn Lwrite(val: c_int) -> c_int;
 }
 
 fn box_int(num: i32) -> i32 {
@@ -33,7 +33,7 @@ impl Environment for UnsafeEnvironment {
     fn eval(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<Value, InterpreterError> {
         match b {
             BuiltIn::Read => {
-                let num = unsafe { read() }; // boxed num
+                let num = unsafe { Lread() }; // boxed num
                 Ok(Value::Int(unbox_int(num)))
             },
             BuiltIn::Write => todo!(),
