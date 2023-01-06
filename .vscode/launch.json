@@ -87,6 +87,7 @@
                     "build",
                     "--target=i686-unknown-linux-gnu",
                     "--bin=lama-interpreter",
+                    "--features \"native_env\"",
                     "--package=lama-interpreter"
                 ],
                 "filter": {

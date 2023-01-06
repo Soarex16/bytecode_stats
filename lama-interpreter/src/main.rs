@@ -1,6 +1,6 @@
 use std::{env, error::Error, fs, io::Read};
 
-use lama_interpreter::{Interpreter, RustEnvironment, NativeEnvironment};
+use lama_interpreter::{Interpreter, RustEnvironment, NativeEnvironment, Environment};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args().into_iter().skip(1);
@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let bytefile = lama_bc::parse(&buffer)?;
 
-    let env = if cfg!(all(target_os = "linux", target_arch = "x86")) {
+    let env : Box<dyn Environment> = if cfg!(feature = "native_env") {
         Box::new(NativeEnvironment)
     } else {
         Box::new(RustEnvironment)

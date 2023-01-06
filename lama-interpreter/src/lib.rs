@@ -7,6 +7,6 @@ mod stack;
 mod value;
 
 pub use interpreter::Interpreter;
+pub use env::Environment;
 pub use env::RustEnvironment;
-#[cfg(all(target_os = "linux", target_arch = "x86"))]
 pub use env::NativeEnvironment;

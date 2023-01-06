@@ -34,6 +34,7 @@ enum Tag {
 pub struct NativeEnvironment;
 
 impl Environment for NativeEnvironment {
+    #[cfg(all(target_os = "linux", target_arch = "x86"))]
     fn built_in(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<Value, InterpreterError> {
         match b {
             BuiltIn::Array(size) => {
@@ -45,6 +46,7 @@ impl Environment for NativeEnvironment {
         }
     }
 
+    #[cfg(all(target_os = "linux", target_arch = "x86"))]
     fn library(
         &mut self,
         func: &str,
@@ -75,5 +77,20 @@ impl Environment for NativeEnvironment {
             },
             _ => Err(InterpreterError::UnknownFunction(func.to_string())),
         }
+    }
+
+    #[cfg(not(all(target_os = "linux", target_arch = "x86")))]
+    fn built_in(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<Value, InterpreterError> {
+        panic!("Available only on i686")
+    }
+
+    #[cfg(not(all(target_os = "linux", target_arch = "x86")))]
+    fn library(
+        &mut self,
+        func: &str,
+        _nargs: usize,
+        stack: &mut Stack,
+    ) -> Result<Value, InterpreterError> {
+        panic!("Available only on i686")
     }
 }
