@@ -3,8 +3,8 @@ use std::rc::Rc;
 use lama_bc::bytecode::*;
 
 use crate::{
-    call_stack::CallStack, error::InterpreterError, scope::Scope,
-    stack::Stack, value::Value, env::Environment
+    call_stack::CallStack, env::Environment, error::InterpreterError, scope::Scope, stack::Stack,
+    value::Value,
 };
 
 pub struct Interpreter<'a> {

@@ -1,10 +1,10 @@
-use std::{rc::Rc};
-use std::{ffi::{c_int, c_void}};
+use std::ffi::{c_int, c_void};
+use std::rc::Rc;
 
 use lama_bc::bytecode::BuiltIn;
 
-use crate::{stack::Stack, value::Value, error::InterpreterError};
 use super::Environment;
+use crate::{error::InterpreterError, stack::Stack, value::Value};
 
 #[link(name = "runtime")]
 #[cfg(all(target_os = "linux", target_arch = "x86"))]
@@ -43,7 +43,9 @@ impl NativeEnvironment {
     }
 
     #[cfg(not(all(target_os = "linux", target_arch = "x86")))]
-    pub fn new() -> Self { NativeEnvironment }
+    pub fn new() -> Self {
+        NativeEnvironment
+    }
 }
 
 impl Environment for NativeEnvironment {
@@ -54,8 +56,11 @@ impl Environment for NativeEnvironment {
                 let mut vals = stack.take(size as usize)?;
                 vals.reverse();
                 Ok(Value::Array(Rc::new(vals)))
-            },
-            b => Err(InterpreterError::Failure(format!("unsupported bultin: {:?}", b))),
+            }
+            b => Err(InterpreterError::Failure(format!(
+                "unsupported bultin: {:?}",
+                b
+            ))),
         }
     }
 
@@ -70,12 +75,12 @@ impl Environment for NativeEnvironment {
             "Lread" => {
                 let num = unsafe { Lread() };
                 Ok(Value::Int(unbox_int(num)))
-            },
+            }
             "Lwrite" => {
                 let num = stack.pop()?.unwrap_int()?;
                 unsafe { Lwrite(box_int(num)) };
                 Ok(Value::Int(0))
-            },
+            }
             "Llength" => {
                 let val = stack.pop()?;
                 match val {
@@ -87,7 +92,7 @@ impl Environment for NativeEnvironment {
                         found: val.to_string(),
                     }),
                 }
-            },
+            }
             _ => Err(InterpreterError::UnknownFunction(func.to_string())),
         }
     }
