@@ -205,7 +205,11 @@ impl Interpreter<'_> {
                     };
                     self.stack.push(Value::Int(matches))
                 }
-                OpCode::PATT(_) => todo!(),
+                OpCode::PATT(p) => {
+                    let val = self.stack.pop()?;
+                    let matches = self.check_pattern(p, val)?;
+                    self.stack.push(matches);
+                }
 
                 OpCode::CBEGIN { .. } => {
                     return Err(InterpreterError::UnsupportedInstruction(
@@ -262,5 +266,41 @@ impl Interpreter<'_> {
         };
 
         Ok(Value::Int(res))
+    }
+
+    fn check_pattern(&mut self, p: &Pattern, val: Value) -> Result<Value, InterpreterError> {
+        let result = match p {
+            Pattern::String => match val {
+                Value::String(_) => Ok(1),
+                _ => Ok(0),
+            },
+            Pattern::Array => match val {
+                Value::Array(_) => Ok(1),
+                _ => Ok(0),
+            },
+            Pattern::Sexp => match val {
+                Value::Sexp(_, _, _) => Ok(1),
+                _ => Ok(0),
+            },
+            Pattern::Boxed => match val {
+                Value::Int(_) => Ok(0),
+                _ => Ok(1),
+            },
+            Pattern::UnBoxed => match val {
+                Value::Int(_) => Ok(1),
+                _ => Ok(0),
+            },
+            Pattern::Closure => Err(InterpreterError::UnsupportedInstruction(
+                "PATT(Closure)".to_string(),
+            )),
+            Pattern::StrCmp => {
+                let str = self.stack.pop()?;
+                match (val, str) {
+                    (Value::String(x), Value::String(y)) if x == y => Ok(1),
+                    _ => Ok(0),
+                }
+            }
+        }?;
+        Ok(Value::Int(result))
     }
 }
