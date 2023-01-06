@@ -9,6 +9,7 @@ use crate::{
 
 pub struct Interpreter<'a> {
     ip: usize,
+    line: usize,
     bf: &'a ByteFile<'a>,
     stack: Stack,
     call_stack: CallStack,
@@ -23,6 +24,7 @@ impl Interpreter<'_> {
             call_stack: CallStack::new(),
             stack: Stack::new(),
             ip: 0,
+            line: 0,
             env,
             bf,
         }
@@ -226,7 +228,9 @@ impl Interpreter<'_> {
                     ))
                 }
 
-                OpCode::LINE(_) => (),
+                OpCode::LINE(x) => {
+                    self.line = *x as usize;
+                },
                 OpCode::RET => (), // unused
             }
             self.ip += 1;
