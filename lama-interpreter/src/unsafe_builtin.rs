@@ -36,7 +36,11 @@ impl Environment for UnsafeEnvironment {
                 let num = unsafe { Lread() };
                 Ok(Value::Int(unbox_int(num)))
             },
-            BuiltIn::Write => todo!(),
+            BuiltIn::Write => {
+                let num = stack.pop()?.unwrap_int()?;
+                unsafe { Lwrite(box_int(num)) };
+                Ok(Value::Int(0))
+            },
             BuiltIn::Length => todo!(),
             BuiltIn::String => todo!(),
             BuiltIn::Array(_) => todo!(),

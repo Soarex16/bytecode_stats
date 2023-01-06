@@ -80,9 +80,9 @@ impl Interpreter<'_> {
         while self.ip < self.bf.code.len() {
             let opcode = &self.bf.code[self.ip];
 
-            // println!("ip: {}", self.ip);
-            // println!("stack: {:?}", self.stack);
-            // println!("opcode: {:?}", opcode);
+            println!("ip: {}", self.ip);
+            println!("stack: {:?}", self.stack);
+            println!("opcode: {:?}", opcode);
 
             match opcode {
                 OpCode::CONST(x) => self.stack.push(Value::Int(*x)),
