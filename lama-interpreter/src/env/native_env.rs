@@ -38,7 +38,9 @@ pub struct NativeEnvironment;
 impl NativeEnvironment {
     #[cfg(all(target_os = "linux", target_arch = "x86"))]
     pub fn new() -> Self {
-        __gc_init();
+        unsafe {
+            __gc_init();
+        }
         NativeEnvironment
     }
 
