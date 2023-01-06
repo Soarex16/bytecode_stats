@@ -56,3 +56,9 @@ impl Stack {
         Ok(())
     }
 }
+
+impl Default for Stack {
+    fn default() -> Self {
+        Self::new()
+    }
+}

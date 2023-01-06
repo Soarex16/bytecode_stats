@@ -51,13 +51,14 @@ pub enum BinOp {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Pattern {
-    StrCmp,  // =str
-    String,  // #string
-    Array,   // #array
-    Sexp,    // #sexp
-    Boxed,   // #ref
-    UnBoxed, // #val
-    Closure, // #fun
+    // Barray_patt not defined here
+    StrCmp,  // =str, Bstring_patt
+    String,  // #string, Bstring_tag_patt
+    Array,   // #array, Barray_tag_patt
+    Sexp,    // #sexp, Bsexp_tag_patt
+    Boxed,   // #ref, Bboxed_patt
+    UnBoxed, // #val, Bunboxed_patt
+    Closure, // #fun, Bclosure_tag_patt
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -74,13 +75,24 @@ pub enum Location {
     Closure(u32),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum FunctionCall {
+    Function { ptr: InstructionPtr, nargs: u32 },
+    Library { func: String, nargs: u32 },
+    BuiltIn(BuiltIn),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BuiltIn {
-    Read,
-    Write,
-    Length,
+    Elem,
+    Sta,
+
+    Closure,
     String,
     Array(u32),
+    Sexp,
+
+    Tag,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -115,10 +127,7 @@ pub enum OpCode {
     },
     END,
     RET,
-    CALL {
-        ptr: InstructionPtr,
-        nargs: u32,
-    },
+    CALL(FunctionCall),
 
     DROP,
     DUP,
@@ -132,8 +141,6 @@ pub enum OpCode {
 
     FAIL(u32, u32), // line number, leave a value
     LINE(u32),
-
-    BUILTIN(BuiltIn),
 
     // Closures are not supported
     CBEGIN {

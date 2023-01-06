@@ -9,7 +9,7 @@
 # define alloc malloc
 # endif
 
-//# define DEBUG_PRINT 1 
+# define DEBUG_PRINT 1 
 
 #ifdef DEBUG_PRINT
 int indent = 0;

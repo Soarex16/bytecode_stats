@@ -184,10 +184,10 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
                     // 3 => Err(BytecodeParseError::UnsupportedInstruction("CBEGIN".to_string()))?,
                     // 4 => Err(BytecodeParseError::UnsupportedInstruction("CLOSURE".to_string()))?,
                     // 5 => Err(BytecodeParseError::UnsupportedInstruction("CALLC".to_string()))?,
-                    6 => OpCode::CALL {
+                    6 => OpCode::CALL(FunctionCall::Function {
                         ptr: InstructionPtr(parse_u32(&mut position)? as usize),
                         nargs: parse_u32(&mut position)?,
-                    },
+                    }),
                     7 => OpCode::TAG {
                         tag: parse_string(&mut position)?,
                         size: parse_u32(&mut position)?,
@@ -201,15 +201,27 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
             }
             6 => OpCode::PATT(PATTERNS[low as usize]),
             7 => {
-                let builtin = match low {
-                    0 => BuiltIn::Read,
-                    1 => BuiltIn::Write,
-                    2 => BuiltIn::Length,
-                    3 => BuiltIn::String,
-                    4 => BuiltIn::Array(parse_u32(&mut position)?),
+                let func = match low {
+                    0 => FunctionCall::Library {
+                        func: "Lread".to_string(),
+                        nargs: 0,
+                    },
+                    1 => FunctionCall::Library {
+                        func: "Lwrite".to_string(),
+                        nargs: 1,
+                    },
+                    2 => FunctionCall::Library {
+                        func: "Llength".to_string(),
+                        nargs: 1,
+                    },
+                    3 => FunctionCall::Library {
+                        func: "Lstring".to_string(),
+                        nargs: 1,
+                    },
+                    4 => FunctionCall::BuiltIn(BuiltIn::Array(parse_u32(&mut position)?)),
                     _ => Err(BytecodeParseError::UnknownBuiltin(low))?,
                 };
-                OpCode::BUILTIN(builtin)
+                OpCode::CALL(func)
             }
             15 => break,
             _ => Err(BytecodeParseError::InvalidOpcode(x))?,
@@ -218,7 +230,6 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
         code.push(opcode);
     }
 
-    // (addr: usize) -> Result<usize, BytecodeParseError>
     let translate_address = |addr: usize| {
         opcode_offsets_mapping
             .get(&addr)
@@ -235,9 +246,9 @@ fn read_code(input: &[u8]) -> Result<Vec<OpCode>, BytecodeParseError> {
                 let addr = translate_address(addr.0)?;
                 Ok(OpCode::CJMP(cond, *addr))
             }
-            OpCode::CALL { ptr, nargs } => {
+            OpCode::CALL(FunctionCall::Function { ptr, nargs }) => {
                 let addr = translate_address(ptr.0)?;
-                Ok(OpCode::CALL { ptr: *addr, nargs })
+                Ok(OpCode::CALL(FunctionCall::Function { ptr: *addr, nargs }))
             }
             OpCode::CLOSURE { ptr, refs } => {
                 let addr = translate_address(ptr.0)?;

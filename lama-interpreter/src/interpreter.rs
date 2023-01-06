@@ -3,12 +3,8 @@ use std::rc::Rc;
 use lama_bc::bytecode::*;
 
 use crate::{
-    builtin::{Environment},
-    call_stack::CallStack,
-    error::InterpreterError,
-    scope::Scope,
-    stack::Stack,
-    value::Value,
+    call_stack::CallStack, error::InterpreterError, scope::Scope,
+    stack::Stack, value::Value, env::Environment
 };
 
 pub struct Interpreter<'a> {
@@ -17,17 +13,17 @@ pub struct Interpreter<'a> {
     stack: Stack,
     call_stack: CallStack,
     globals: Scope,
-    builtins: Box<dyn Environment>,
+    env: Box<dyn Environment>,
 }
 
 impl Interpreter<'_> {
-    pub fn new<'a>(bf: &'a ByteFile, builtins: Box<dyn Environment>) -> Interpreter<'a> {
+    pub fn new<'a>(bf: &'a ByteFile, env: Box<dyn Environment>) -> Interpreter<'a> {
         Interpreter {
             globals: Scope::new(bf.global_area_size),
             call_stack: CallStack::new(),
-            builtins,
             stack: Stack::new(),
             ip: 0,
+            env,
             bf,
         }
     }
@@ -80,9 +76,9 @@ impl Interpreter<'_> {
         while self.ip < self.bf.code.len() {
             let opcode = &self.bf.code[self.ip];
 
-            println!("ip: {}", self.ip);
-            println!("stack: {:?}", self.stack);
-            println!("opcode: {:?}", opcode);
+            // println!("ip: {}", self.ip);
+            // println!("stack: {:?}", self.stack);
+            // println!("opcode: {:?}", opcode);
 
             match opcode {
                 OpCode::CONST(x) => self.stack.push(Value::Int(*x)),
@@ -120,9 +116,17 @@ impl Interpreter<'_> {
                 OpCode::END => {
                     self.end()?;
                 }
-                OpCode::CALL { ptr, nargs: _ } => {
+                OpCode::CALL(FunctionCall::Function { ptr, nargs: _ }) => {
                     self.call(ptr)?;
                     continue;
+                }
+                OpCode::CALL(FunctionCall::Library { func, nargs }) => {
+                    let res = self.env.library(func, *nargs as usize, &mut self.stack)?;
+                    self.stack.push(res);
+                }
+                OpCode::CALL(FunctionCall::BuiltIn(b)) => {
+                    let res = self.env.built_in(*b, &mut self.stack)?;
+                    self.stack.push(res);
                 }
                 OpCode::FAIL(line, _) => {
                     let x = self.stack.pop()?;
@@ -186,11 +190,6 @@ impl Interpreter<'_> {
                     self.stack.push(item.clone());
                 }
 
-                OpCode::BUILTIN(b) => {
-                    let res = self.builtins.eval(*b, &mut self.stack)?;
-                    self.stack.push(res);
-                }
-
                 OpCode::TAG { tag, size } => {
                     let matches = match self.stack.pop()? {
                         Value::Sexp(t, _, items) if t == *tag && items.len() == *size as usize => 1,
@@ -236,7 +235,7 @@ impl Interpreter<'_> {
     }
 
     fn jump(&mut self, ptr: &InstructionPtr) -> Result<(), InterpreterError> {
-        let new_ip = ptr.0 as usize;
+        let new_ip = ptr.0;
         if new_ip > self.bf.code.len() {
             Err(InterpreterError::InvalidInstructionPtr(new_ip))?;
         }
