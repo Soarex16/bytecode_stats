@@ -1,7 +1,6 @@
 use std::{env, error::Error, fs, io::Read};
 
-use lama_interpreter::Interpreter;
-use lama_interpreter::UnsafeEnvironment;
+use lama_interpreter::{Interpreter, RustEnvironment};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args().into_iter().skip(1);
@@ -15,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let bytefile = lama_bc::parse(&buffer)?;
 
-    let mut interpreter = Interpreter::new(&bytefile, Box::new(UnsafeEnvironment));
+    let mut interpreter = Interpreter::new(&bytefile, Box::new(RustEnvironment));
     interpreter.run(program_args)?;
 
     Ok(())

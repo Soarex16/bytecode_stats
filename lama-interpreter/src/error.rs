@@ -25,4 +25,6 @@ pub enum InterpreterError {
     Failure(String),
     #[error("unsupported instruction {0}")]
     UnsupportedInstruction(String),
+    #[error("unknown function {0}")]
+    UnknownFunction(String),
 }

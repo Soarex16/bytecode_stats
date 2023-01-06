@@ -1,6 +1,11 @@
+use std::{
+    io::{self, Write},
+    rc::Rc,
+};
+
 use lama_bc::bytecode::BuiltIn;
 
-use crate::{stack::Stack, value::Value, error::InterpreterError};
+use crate::{error::InterpreterError, stack::Stack, value::Value};
 
 use super::Environment;
 
@@ -8,9 +13,31 @@ pub struct RustEnvironment;
 
 impl Environment for RustEnvironment {
     fn built_in(&mut self, b: BuiltIn, stack: &mut Stack) -> Result<Value, InterpreterError> {
-/*         match b {
-            BuiltIn::Read => {
+        match b {
+            BuiltIn::Array(size) => {
+                let mut vals = stack.take(size as usize)?;
+                vals.reverse();
+                Ok(Value::Array(Rc::new(vals)))
+            }
+            b => Err(InterpreterError::Failure(format!(
+                "unsupported bultin: {:?}",
+                b
+            ))),
+        }
+    }
+
+    fn library(
+        &mut self,
+        func: &str,
+        nargs: usize,
+        stack: &mut Stack,
+    ) -> Result<Value, InterpreterError> {
+        match func {
+            "Lread" => {
                 print!(">");
+                io::stdout()
+                    .flush()
+                    .map_err(|_| InterpreterError::Unknown("IO error".to_string()))?;
                 let mut input = String::new();
                 io::stdin().read_line(&mut input).map_err(|_| {
                     InterpreterError::Failure("Error evaluating builtin Read".to_string())
@@ -20,12 +47,12 @@ impl Environment for RustEnvironment {
                 })?;
                 Ok(Value::Int(num))
             }
-            BuiltIn::Write => {
+            "Lwrite" => {
                 let val = stack.pop()?;
                 println!("{}", val);
                 Ok(Value::Int(0))
             }
-            BuiltIn::Length => {
+            "Llength" => {
                 let val = stack.pop()?;
                 match val {
                     Value::Sexp(_, _, vals) => Ok(Value::Int(vals.len() as i32)),
@@ -37,30 +64,7 @@ impl Environment for RustEnvironment {
                     }),
                 }
             }
-            BuiltIn::String => todo!(),
-            BuiltIn::Array(size) => {
-                let mut vals = stack.take(size as usize)?;
-                vals.reverse();
-                Ok(Value::Array(Rc::new(vals)))
-            }
-        } */
-        match b {
-            BuiltIn::Elem => todo!(),
-            BuiltIn::Sta => todo!(),
-            BuiltIn::String => todo!(),
-            BuiltIn::Array(_) => todo!(),
-            BuiltIn::Sexp => todo!(),
-            BuiltIn::Tag => todo!(),
-            BuiltIn::Closure => Err(InterpreterError::UnsupportedInstruction("Error parsing number in builtin Read".to_string())),
+            _ => Err(InterpreterError::UnknownFunction(func.to_string())),
         }
-    }
-
-    fn library(
-        &mut self,
-        func: &str,
-        nargs: usize,
-        stack: &mut Stack,
-    ) -> Result<Value, InterpreterError> {
-        unimplemented!()
     }
 }
