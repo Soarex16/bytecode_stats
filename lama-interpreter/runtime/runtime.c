@@ -1578,7 +1578,7 @@ extern void __gc_root_scan_stack ();
 /* ======================================== */
 
 //static size_t SPACE_SIZE = 16;
-static size_t SPACE_SIZE = 256 * 1024 * 1024;
+static size_t SPACE_SIZE = 16; //256 * 1024 * 1024;
 // static size_t SPACE_SIZE = 128;
 // static size_t SPACE_SIZE = 1024 * 1024;
 
@@ -1598,6 +1598,8 @@ static void init_to_space (int flag) {
   to_space.begin = mmap (NULL, space_size, PROT_READ | PROT_WRITE,
 			 MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
   if (to_space.begin == MAP_FAILED) {
+    printf ("MMAP ERR: %d\n", err);
+    fflush(stdout);
     perror ("EROOR: init_to_space: mmap failed\n");
     exit   (1);
   }
@@ -1878,14 +1880,14 @@ static inline void init_extra_roots (void) {
 }
 
 extern void __init (void) {
-  size_t space_size = SPACE_SIZE * sizeof(size_t);
+  size_t space_size = SPACE_SIZE it* sizeof(size_t);
 
   srandom (time (NULL));
   
   from_space.begin = mmap (NULL, space_size, PROT_READ | PROT_WRITE,
     			   MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
   to_space.begin   = NULL;
-  if (to_space.begin == MAP_FAILED) {
+  if (from_space.begin == MAP_FAILED) {
     perror ("EROOR: init_pool: mmap failed\n");
     exit   (1);
   }

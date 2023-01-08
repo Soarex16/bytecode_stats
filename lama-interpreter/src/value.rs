@@ -120,6 +120,10 @@ impl NativeValue {
         !self.boxed()
     }
 
+    pub fn raw(self) -> i32 {
+        self.0
+    }
+
     pub fn unwrap_int(self) -> Result<i32, InterpreterError> {
         if self.boxed() {
             Err(InterpreterError::UnexpectedValue {
