@@ -1598,8 +1598,6 @@ static void init_to_space (int flag) {
   to_space.begin = mmap (NULL, space_size, PROT_READ | PROT_WRITE,
 			 MAP_PRIVATE | MAP_ANONYMOUS | MAP_32BIT, -1, 0);
   if (to_space.begin == MAP_FAILED) {
-    printf ("MMAP ERR: %d\n", err);
-    fflush(stdout);
     perror ("EROOR: init_to_space: mmap failed\n");
     exit   (1);
   }
